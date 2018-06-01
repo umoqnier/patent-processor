@@ -1,0 +1,6 @@
+# For IDE's Jetbrains
+.idea/
+
+# For data sets
+*.txt
+*.csv
