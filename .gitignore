@@ -2,5 +2,8 @@
 .idea/
 
 # For data sets
-#*.txt
-#*.csv
+*.txt
+*.csv
+
+output_files/
+

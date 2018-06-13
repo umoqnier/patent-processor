@@ -5,9 +5,9 @@ import os
 # TODO: Adecuar para obtener archivos de carpetas por año
 
 
-def get_xml_file(name, year):
+def get_xml_file(patent_type, name, year):
     try:
-        tree = ET.parse("patents_xml/" + year + "/" + name)
+        tree = ET.parse("patents_xml/" + patent_type + '/' + year + '/' + name)
         root = tree.getroot()
     except FileNotFoundError:
         print("FILE", name, "NOT FOUND")
@@ -18,7 +18,7 @@ def get_xml_file(name, year):
 def search_patents_in_tree(root):
     for child in root:
         t = child.attrib
-        if t['nombre'] == "Patentes":
+        if t['nombre'] == "Patentes" or t['nombre'] == "Solicitudes normales":
             patents = child
             return patents
 
@@ -60,23 +60,51 @@ def field_formatter(root):
     return data
 
 
+def list_all_fields(root):
+    patents = search_patents_in_tree(root)
+    for patent in patents:
+        fields = patent.findall("campo")
+        for i, field in enumerate(fields):
+            print(field.find("clave").text)
+        break  # Just one patent
+
+
 def main():
+    print("¿Qué patentes deben ser procesadas?")
+    mode = input("Solicitadas: (s) Otorgadas: (o) -->")
     for year in range(2009, 2019):
-        os.mkdir("output_files/" + str(year) + "/")
-        for month in range(1, 13):
-            if month > 9:
-                base = "PA_RE_" + str(year) + '_' + str(month) + "_001.xml"
-            else:
-                base = "PA_RE_" + str(year) + '_0' + str(month) + "_001.xml"
-            root = get_xml_file(base, str(year))
-            if not root:
-                continue
-            data = field_formatter(root)
-            out_name = base[:-4] + ".csv"
-            f_out = open("output_files/" + str(year) + "/" + out_name, "w")
-            f_out.write("Número de concesión|Tipo de documento|Número de solicitud|Fecha de presentación|"
-                        "Fecha de concesión|Clasificación CIP|Título|Resumen|Inventor(es)|Titular\n")  # Header
-            f_out.write(data)
+        if mode == 'o' or mode == 'O':
+            os.mkdir("output_files/otorgadas/" + str(year) + "/")
+            for month in range(1, 13):
+                if month > 9:
+                    base = "PA_RE_" + str(year) + '_' + str(month) + "_001.xml"
+                else:
+                    base = "PA_RE_" + str(year) + '_0' + str(month) + "_001.xml"
+                root = get_xml_file("otorgadas", base, str(year))
+                if not root:
+                    continue
+                data = field_formatter(root)
+                out_name = base[:-4] + ".csv"
+                f_out = open("output_files/otorgadas/" + str(year) + "/" + out_name, "w")
+                f_out.write("Numero de concesion|Tipo de documento|Numero de solicitud|Fecha de presentacion|"
+                            "Fecha de concesion|Clasificacion CIP|Título|Resumen|Inventor(es)|Titular\n")  # Header
+                f_out.write(data)
+        elif mode == 's' or mode == 'S':
+            # os.mkdir("output_files/solicitadas/" + str(year) + "/")
+            for month in range(1, 13):
+                if month > 9:
+                    base = "PA_SO_" + str(year) + '_' + str(month) + "_001.xml"
+                else:
+                    base = "PA_SO_" + str(year) + '_0' + str(month) + "_001.xml"
+                root = get_xml_file("solicitadas", base, str(year))
+                if not root:
+                    continue
+                print(str(year))
+                list_all_fields(root)
+                break
+        else:
+            print("ERROR: Elige una opción correcta --> (s) - (o)")
+            print("Saliendo del programa...")
 
 
 if __name__ == '__main__':
