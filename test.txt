@@ -1,1 +1,0 @@
-Número de concesión,Tipo de documento,Número de solicitud,Fecha de presentación,Fecha de concesión,Clasificación CIP,Título,Resumen,Inventor(es),Titular

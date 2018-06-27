@@ -5,6 +5,12 @@ import os
 # TODO: Adecuar para obtener archivos de carpetas por año
 
 
+def get_fields(file_name):
+    with open(file_name, "r") as f:
+        data = f.readline()
+        return data.split(',')
+
+
 def get_xml_file(patent_type, name, year):
     try:
         tree = ET.parse("patents_xml/" + patent_type + '/' + year + '/' + name)
@@ -25,31 +31,34 @@ def search_patents_in_tree(root):
 
 def field_formatter(root):
     root_attr = root.attrib
-    fields_l = ["Número de concesión", "Tipo de documento", "Número de solicitud", "Fecha de presentación", "Fecha de concesión",
-                "Clasificación CIP", "Título", "Resumen", "Inventor(es)", "Titular"]
+    fields_l = get_fields("campos_solicitadas.txt")
     fields_iter = iter(fields_l)
     patents = search_patents_in_tree(root)
     current_field = fields_iter.__next__()
     data = "Gaceta: " + root_attr['gaceta'] + " Volúmen: " + root_attr['volumen'] + "\n"  # Get type of document and
     #  month from root tag attrib
     for patent in patents:
-        fields_from_file = patent.findall("campo")
-        fields_from_file_iter = iter(fields_from_file)
+        fields_from_xml = patent.findall("campo")
+        fields_from_xml_iter = iter(fields_from_xml)
         while True:
             try:
-                field = fields_from_file_iter.__next__()
+                field = fields_from_xml_iter.__next__()
             except StopIteration:
                 print(current_field, "not found at this patent")
                 data += "NF|"
-                fields_from_file_iter = iter(fields_from_file)
+                fields_from_xml_iter = iter(fields_from_xml)
+                try:
+                    current_field = fields_iter.__next__()
+                except StopIteration:
+                    break
             key = field.find("clave").text
-            if key in current_field:
+            if key == current_field:  # TODO: Solucion de conflictos con patentes que tienen nombres diferentes en campo
                 value = field.find("valor").text
                 try:
                     data += value + '|'
                 except TypeError:
                     data += " |"
-                fields_from_file_iter = iter(fields_from_file)  # Rewind the fields where search
+                fields_from_xml_iter = iter(fields_from_xml)  # Rewind the fields where search
                 try:
                     current_field = fields_iter.__next__()
                 except StopIteration:
@@ -89,8 +98,9 @@ def main():
                 f_out.write("Numero de concesion|Tipo de documento|Numero de solicitud|Fecha de presentacion|"
                             "Fecha de concesion|Clasificacion CIP|Título|Resumen|Inventor(es)|Titular\n")  # Header
                 f_out.write(data)
+                f_out.close()
         elif mode == 's' or mode == 'S':
-            # os.mkdir("output_files/solicitadas/" + str(year) + "/")
+            os.mkdir("output_files/solicitadas/" + str(year) + "/")
             for month in range(1, 13):
                 if month > 9:
                     base = "PA_SO_" + str(year) + '_' + str(month) + "_001.xml"
@@ -100,8 +110,15 @@ def main():
                 if not root:
                     continue
                 print(str(year))
-                list_all_fields(root)
-                break
+                data = field_formatter(root)
+                out_name = base[:-4] + ".csv"
+                f_out = open("output_files/solicitadas/" + str(year) + "/" + out_name, "w")
+                f_out.write("Número de solicitud|Fecha de presentación|Solicitante(s)|Inventor(es)|Agente|"
+                            "Prioridad (es)|Clasificación|Título|Resumen|Número de solicitud internacional|"
+                            "Fecha de presentación internacional|Número de publicación internacional|"
+                            "Fecha de publicación internacional\n")  # Header
+                f_out.write(data)
+                f_out.close()
         else:
             print("ERROR: Elige una opción correcta --> (s) - (o)")
             print("Saliendo del programa...")
